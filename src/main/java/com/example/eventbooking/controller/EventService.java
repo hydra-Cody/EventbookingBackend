@@ -25,12 +25,6 @@ public class EventService {
         private final UserRepository userRepository;
         private final EventAttendeeRepository attendeeRepository;
 
-        /*
-         * -------------------------------------------------
-         * READ‑ONLY METHODS
-         * -------------------------------------------------
-         */
-
         public List<EventResponse> getAllEvents() {
                 return eventRepository.findAll()
                                 .stream()
@@ -43,12 +37,6 @@ public class EventService {
                                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
                 return mapToResponse(event);
         }
-
-        /*
-         * -------------------------------------------------
-         * CREATE EVENT (organizer)
-         * -------------------------------------------------
-         */
 
         @Transactional
         public EventResponse createEvent(EventCreateRequest req, Long organizerId) {
@@ -74,12 +62,6 @@ public class EventService {
                 return mapToResponse(saved);
         }
 
-        /*
-         * -------------------------------------------------
-         * ATTEND / CANCEL
-         * -------------------------------------------------
-         */
-
         @Transactional
         public void attendEvent(Long eventId, Long userId) {
 
@@ -92,12 +74,10 @@ public class EventService {
                         throw new SeatUnavailableException("No seats available");
                 }
 
-                // Prevent double registration
                 boolean exists = attendeeRepository.existsByUserAndEvent(user, event);
                 if (exists)
                         throw new EntityExistsException("User already registered");
 
-                // Create attendee entry
                 EventAttendee attendee = EventAttendee.builder()
                                 .user(user)
                                 .event(event)
@@ -107,7 +87,6 @@ public class EventService {
 
                 attendeeRepository.save(attendee);
 
-                // Decrement available seats
                 event.setAvailableSeats(event.getAvailableSeats() - 1);
                 eventRepository.save(event);
         }
@@ -130,16 +109,9 @@ public class EventService {
                 attendee.setStatus(AttendanceStatus.CANCELLED);
                 attendeeRepository.save(attendee);
 
-                // Increment available seats
                 event.setAvailableSeats(event.getAvailableSeats() + 1);
                 eventRepository.save(event);
         }
-
-        /*
-         * -------------------------------------------------
-         * PRIVATE DTO MAPPING
-         * -------------------------------------------------
-         */
 
         private EventResponse mapToResponse(Event e) {
                 return EventResponse.builder()

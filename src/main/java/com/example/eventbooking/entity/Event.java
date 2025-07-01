@@ -5,22 +5,8 @@ import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.example.eventbooking.dto.EventResponse.EventResponseBuilder;
-
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
 
 @Entity
 @Table(name = "events")
@@ -28,7 +14,9 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder // ✅ add this
 public class Event {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -42,14 +30,26 @@ public class Event {
     @Column(nullable = false, length = 180)
     private String location;
 
+    @Column(nullable = false)
     private LocalDate eventDate;
 
     @Column(nullable = false)
     private Integer capacity;
 
     @Column(nullable = false)
-    private Integer availableSeats;
+    private String imageUrl;
 
+    @Column(nullable = false)
+    private Double latitude;
+
+    @Column(nullable = false)
+    private Double longitude;
+
+    @Builder.Default // keep default in builder
+    @Column(nullable = false)
+    private Integer availableSeats = 0;
+
+    @Builder.Default
     @Column(nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
@@ -57,11 +57,7 @@ public class Event {
     @JoinColumn(name = "organizer_id")
     private User organizer;
 
+    @Builder.Default
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<EventAttendee> attendees = new HashSet<>();
-
-    public static EventResponseBuilder builder() {
-        throw new UnsupportedOperationException("Unimplemented method 'builder'");
-    }
-
 }
