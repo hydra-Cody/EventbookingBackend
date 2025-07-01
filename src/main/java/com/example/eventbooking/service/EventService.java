@@ -21,27 +21,31 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class EventService {
 
-        private final EventRepository eventRepository;
-        private final UserRepository userRepository;
-        private final EventAttendeeRepository attendeeRepository;
+        private final EventRepository eventRepo;
+        private final UserRepository userRepo;
+        private final EventAttendeeRepository attendeeRepo;
+
+        /* ---------- READ‑ONLY ---------- */
 
         public List<EventResponse> getAllEvents() {
-                return eventRepository.findAll()
+                return eventRepo.findAll()
                                 .stream()
-                                .map(this::mapToResponse)
+                                .map(this::mapToDto)
                                 .collect(Collectors.toList());
         }
 
         public EventResponse getEventById(Long id) {
-                Event event = eventRepository.findById(id)
+                Event event = eventRepo.findById(id)
                                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
-                return mapToResponse(event);
+                return mapToDto(event);
         }
+
+        /* ---------- CREATE ---------- */
 
         @Transactional
         public EventResponse createEvent(EventCreateRequest req, Long organizerId) {
 
-                User organizer = userRepository.findById(organizerId)
+                User organizer = userRepo.findById(organizerId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Organizer not found"));
 
                 Event event = Event.builder()
@@ -58,25 +62,26 @@ public class EventService {
                                 .createdAt(OffsetDateTime.now())
                                 .build();
 
-                Event saved = eventRepository.save(event);
-                return mapToResponse(saved);
+                return mapToDto(eventRepo.save(event));
         }
+
+        /* ---------- ATTEND / CANCEL ---------- */
 
         @Transactional
         public void attendEvent(Long eventId, Long userId) {
 
-                Event event = eventRepository.findById(eventId)
+                Event event = eventRepo.findById(eventId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
-                User user = userRepository.findById(userId)
+                User user = userRepo.findById(userId)
                                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
                 if (event.getAvailableSeats() <= 0) {
                         throw new SeatUnavailableException("No seats available");
                 }
 
-                boolean exists = attendeeRepository.existsByUserAndEvent(user, event);
-                if (exists)
-                        throw new EntityExistsException("User already registered");
+                if (attendeeRepo.existsByUserAndEvent(user, event)) {
+                        throw new EntityExistsException("Already registered");
+                }
 
                 EventAttendee attendee = EventAttendee.builder()
                                 .user(user)
@@ -85,35 +90,36 @@ public class EventService {
                                 .registeredAt(OffsetDateTime.now())
                                 .build();
 
-                attendeeRepository.save(attendee);
-
+                attendeeRepo.save(attendee);
                 event.setAvailableSeats(event.getAvailableSeats() - 1);
-                eventRepository.save(event);
+                eventRepo.save(event);
         }
 
         @Transactional
         public void cancelAttendance(Long eventId, Long userId) {
 
-                Event event = eventRepository.findById(eventId)
+                Event event = eventRepo.findById(eventId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
-                User user = userRepository.findById(userId)
+                User user = userRepo.findById(userId)
                                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-                EventAttendee attendee = attendeeRepository.findByUserAndEvent(user, event)
+                EventAttendee attendee = attendeeRepo.findByUserAndEvent(user, event)
                                 .orElseThrow(() -> new ResourceNotFoundException("Registration not found"));
 
                 if (attendee.getStatus() == AttendanceStatus.CANCELLED) {
-                        throw new IllegalStateException("Already cancelled");
+                        return; // already cancelled; silently ignore or throw if preferred
                 }
 
                 attendee.setStatus(AttendanceStatus.CANCELLED);
-                attendeeRepository.save(attendee);
+                attendeeRepo.save(attendee);
 
                 event.setAvailableSeats(event.getAvailableSeats() + 1);
-                eventRepository.save(event);
+                eventRepo.save(event);
         }
 
-        private EventResponse mapToResponse(Event e) {
+        /* ---------- MAPPER ---------- */
+
+        private EventResponse mapToDto(Event e) {
                 return EventResponse.builder()
                                 .id(e.getId())
                                 .title(e.getTitle())
