@@ -1,3 +1,11 @@
+## 🔗 Project Links
+
+- 🌐 **Live Site**: [https://food-zjio.vercel.app/](https://food-zjio.vercel.app/)
+- 🛠️ **Backend Repo**: [Event Booking Backend](https://github.com/hydra-Cody/EventbookingBackend)
+- 🎨 **Frontend Repo**: [Event Booking Frontend](https://github.com/anuragdw710/EventBooking)
+
+---
+
 # 🎟️ Event Booking Application
 
 A Spring Boot-based RESTful web application that enables users to **create**, **view**, and **manage events** with ease. Perfect for organizers and attendees alike!
